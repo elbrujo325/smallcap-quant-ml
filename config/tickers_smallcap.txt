@@ -1,0 +1,26 @@
+# Lista inicial de tickers small cap para prueba (precio 1-20 USD, vol > 500k)
+# Formato: uno por línea, mayúsculas, ignora líneas con #
+
+# Small caps con liquidez decente
+ABSI
+CRMD
+FLGT
+IMUX
+KPTI
+MCRB
+NBTX
+PRQR
+SGMO
+ASTE
+BCYC
+BCTX
+BCRX
+BEEM
+CRBP
+CRSR
+EBON
+EXTR
+HBIO
+HOTH
+KROS
+LRMR
