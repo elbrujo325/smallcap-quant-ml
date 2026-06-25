@@ -3,23 +3,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 
-> **ML Pipeline (LightGBM) for Systematic Small-Cap Trading Strategy Generation with ATR-Adaptive Risk Management**
+> **ML-driven Small-Cap Strategy Discovery: RF → Feature Selection → Decision Tree → Rules**
 
 ---
 
-## 📋 Flujo del Proyecto (Orden Correcto)
+## 📋 Flujo del Proyecto (Arquitectura ML)
 
-El pipeline sigue la metodología documentada en `docs/metodologia.pdf` (Secciones 2-10):
-
-| Fase | Notebook/Script | Output | Estado |
-|------|-----------------|--------|--------|
-| **1. Datos + Features + Calibración Riesgo** | `batch_calibrate.py` | `data/universe_admitted.csv` (Csl + BP) | ✅ Implementado |
-| **2. EDA** | `notebooks/01_eda.ipynb` | `data/eda_summary.csv` | ✅ Implementado |
-| **3. Generador de Estrategias** | `notebooks/02_strategy_generator.ipynb` | `data/strategies_generated.json` | 🔲 Pending (tuya) |
-| **4. Backtest Estrategias** | `notebooks/03_backtest_strategies.ipynb` | `data/trades_backtest.csv` + metrics | 🔲 Pending |
-| **5. Tests Robustez** | `notebooks/04_robustez.ipynb` | Reporte robustez | 🔲 Pending |
-| **6. Validación Final** | `notebooks/05_validacion.ipynb` | Validación estadística | 🔲 Pending |
-| **7. ML Pipeline** | `notebooks/05_model_training.ipynb` | Modelo LightGBM | 🔲 Pending |
+| Fase | Notebook/Script | Descripción | Output | Estado |
+|------|-----------------|-------------|--------|--------|
+| **1. Datos + Features** | `01_eda.ipynb` | EDA + calidad datos | `data/eda_summary.csv` | ✅ |
+| **2. Calibración Riesgo** | `batch_calibrate.py` | Csl + BP por activo | `data/universe_admitted.csv` | ✅ |
+| **3. Feature Engineering** | `03_feature_engineering.ipynb` | ~20 indicadores OHLCV | Features en memory/DISK | 🔲 |
+| **4. Triple Barrier Labeling** | `04_labeling.ipynb` | Etiquetado {0,1,2} | `data/labeled_*.csv` | 🔲 |
+| **5. RF + Feature Selection** | `05_strategy_builder.ipynb` | RF → Top N features | Feature importances | 🔲 |
+| **6. Decision Tree + Rules** | `05_strategy_builder.ipynb` | Tree (depth=3/4) | `data/strategies_candidates.json` | 🔲 |
+| **7. Backtest + OOS** | `06_backtest_strategies.ipynb` | Train⇆Test (70/30) | `data/strategies_library.json` | 🔲 |
 
 ---
 
@@ -28,74 +26,70 @@ El pipeline sigue la metodología documentada en `docs/metodologia.pdf` (Seccion
 ```
 smallcap-quant-ml/
 ├── config/
-│   ├── settings.py                   # ← Todos los parámetros centralizados
-│   └── tickers_smallcap.txt          # ← Lista inicial de tickers
+│   ├── settings.py                   # Todos los parámetros
+│   └── tickers_smallcap.txt          # Lista inicial
 ├── scripts/
-│   └── batch_calibrate.py            # ← Calibración Csl + BP (Secciones 5-6)
+│   └── batch_calibrate.py            # Calibración Csl + BP
 ├── notebooks/
-│   ├── 01_eda.ipynb                  # ← EDA puro (sin backtest ni señales)
-│   ├── 02_strategy_generator.ipynb   # ← GENERADOR (tú lo programas)
-│   ├── 03_backtest_strategies.ipynb  # ← Backtest de estrategias generadas
-│   ├── 04_robustez.ipynb             # ← 8 tests robustez (Sección 9)
-│   ├── 05_validacion.ipynb           # ← 3 tests validación (Sección 10)
-│   └── ... (más notebooks ML si aplica)
+│   ├── 01_eda.ipynb                  # EDA puro
+│   ├── 03_feature_engineering.ipynb  # ~20 indicadores
+│   ├── 04_labeling.ipynb             # Triple Barrier
+│   ├── 05_strategy_builder.ipynb     # RF + Tree + Reglas
+│   └── 06_backtest_strategies.ipynb  # Backtest + Validación OOS
 ├── src/
-│   ├── data.py                       # ← Carga datos (yfinance, CSV)
-│   ├── features.py                   # ← Indicadores + Efficiency Ratio
-│   ├── risk.py                       # ← **BACKTESTER GENÉRICO**: Csl, BP, run_backtest_loop()
-│   ├── labeling.py                   # ← Triple Barrier (stubs)
-│   └── model.py                      # ← LightGBM (stubs)
+│   ├── data.py                       # Carga datos
+│   ├── features.py                   # ~20 indicadores
+│   ├── risk.py                       # **BACKTESTER + Risk** (Csl, SIZE, TP/SL)
+│   ├── labeling.py                   # Triple Barrier
+│   ├── strategy_builder.py           # RF → Tree → Rules (NUEVO)
+│   └── model.py                      # Referencia opcional
 ├── data/
-│   ├── calibration_all.csv           # ← Todos los tickers probados
-│   ├── universe_admitted.csv         # ← Atividades admitidos (Csl+BP ok) ✅
-│   ├── eda_summary.csv               # ← Resumen EDA
-│   └── ... (resultados de backtest/robustez)
-├── docs/                             # ← Metodología PDF (pendiente subir)
+│   ├── calibration_all.csv           # 22 tickers probados
+│   ├── universe_admitted.csv         # Activos admitidos (Csl+BP ok) ✅
+│   └── ... (labeled, strategies, library)
 └── README.md
 ```
 
 ---
 
-## ✅ Ya Implementado (Herramientas Reutilizables)
+## ✅ Ya Implementado (Core)
 
 ### 1. **Calibración de Riesgo (Secciones 5-6)**
-- `scripts/batch_calibrate.py`: Calibra Csl como MEDIANA de 500 entradas, verifica BP en muestra independiente.
-- **Output**: `data/universe_admitted.csv` (activos con Csl validado y BP controlado).
-- **Uso**: `python scripts/batch_calibrate.py`
+- `scripts/batch_calibrate.py`: Csl = MEDIANA, BP verificado independiente.
+- Output: `data/universe_admitted.csv` (9 tickers admitidos).
 
 ### 2. **Backtester Genérico (`src/risk.py`)**
-- `run_backtest_loop(df, entry_signal, c_sl, c_tp, max_bars, ...)`: Motor de backtest **independiente de la estrategia**.
-- `calculate_performance_metrics(trades, capital)`: Win rate, PF, Sharpe, drawdown, etc.
-- **Uso**: Importa de `src.risk` y pásale CUALQUIER señal booleana.
+- `run_backtest_loop(df, entry_signal, c_sl, ...)`: Motor independiente de estrategias.
+- `calculate_performance_metrics(trades, capital)`: Win Rate, PF, Sharpe, DD.
+- **Se reutiliza** en Fases 10-12 para backtest de estrategias extraídas.
 
-### 3. **Features & Indicadores (`src/features.py`)**
-- ATR(50), SMA, ROC, Efficiency Ratio(k=10, th=0.3), estructura precio, velas, wicks.
-- `add_all_features(df)`: Aplica todo automático.
+### 3. **Feature Engineering (`src/features.py`)**
+- ~20 indicadores: RSI, ATR, EMA20/50, distancias %, VWAP, MACD, RVOL, Gap%, ADX, ROC, Momentum, Volatilidad, Bollinger, etc.
+
+### 4. **Triple Barrier Labeling (`src/labeling.py`)**
+- Labels: 0 (SL), 1 (TP), 2 (Timeout).
+- Regla de desempate conservadora: SL gana si ambos se tocan simultáneamente.
+
+### 5. **Strategy Builder (`src/strategy_builder.py`)**
+- RF → Feature Importance → Top N → Decision Tree → Extract Rules.
+- Filtra: P(TP) > 0.5, n_samples >= 30.
 
 ---
 
-## ⏳ Pendiente (Tu Turno)
+## ⏳ Pendiente (Por Ejecutar)
 
-### 1. **Generador de Estrategias (Crítico)**
-- **Qué es**: Sistema que genera reglas de entrada/salida (motor genético, random search, GP, etc.).
-- **Dónde**: `notebooks/02_strategy_generator.ipynb` (placeholder con estructura).
-- **Output**: `data/strategies_generated.json` (lista de estrategias con filtros, triggers, exits).
-- **Opciones**:
-  - Rule-Based Builder + Random Search (recomendado: rápido, parametrizable).
-  - Genético (DEAP): más complejo pero más potencia.
-  - Genetic Programming: evoluciona árboles de expresión.
+### 1. **Feature Engineering en Batch** (Fase 2)
+- Calcular ~20 indicadores para todos los tickers admitidos.
+- Output: `data/features_*.csv`.
 
-### 2. **Backtest de Estrategias**
-- **Qué es**: Tomar estrategias generadas, convertir a señales booleanas, backtestear en `03_backtest_strategies.ipynb`.
-- **Depende de**: Generador implementado.
+### 2. **Triple Barrier Labeling** (Fase 4)
+- Etiquetar entradas para cada activo.
+- Output: `data/labeled_*.csv`.
 
-### 3. **Tests de Robustez (Sección 9)**
-- 8 tests: Noise, Variance, Monte Carlo, Reshuffle, Vs Random, Entry Lag, Walk Forward, Synthetic Data.
-- **Notaback**: `04_robustez.ipynb`.
-
-### 4. **Validación Final (Sección 10)**
-- BP en estrategia real, bandas drawdown, T-Student últimos 30 trades.
-- **Notebook**: `05_validacion.ipynb`.
+### 3. **Pipeline ML Completo** (Fases 5-12)
+- Ejecutar `05_strategy_builder.ipynb`: RF → Top 5 features → Tree → Reglas.
+- Ejecutar `06_backtest_strategies.ipynb`: Backtest train/test + validación OOS.
+- Output final: `data/strategies_library.json` (estrategias validadas).
 
 ---
 
@@ -111,20 +105,22 @@ python -m venv .venv
 source .venv/bin/activate
 
 # 3. Instalar
-pip install pandas numpy yfinance jupyter
-# Opcional: conda install ta-lib
+pip install pandas numpy yfinance scikit-learn jupyter
 
-# 4. Calibrar Csl + BP (OPCIONAL, solo si no tienes universe_admitted.csv)
+# 4. Calibrar Csl + BP (si no tienes universe_admitted.csv)
 python scripts/batch_calibrate.py
 
-# 5. EDA
-jupyter notebook notebooks/01_eda.ipynb
+# 5. Feature Engineering
+jupyter notebook notebooks/03_feature_engineering.ipynb
 
-# 6. Generar Estrategias (TODO)
-jupyter notebook notebooks/02_strategy_generator.ipynb
+# 6. Labeling
+jupyter notebook notebooks/04_labeling.ipynb
 
-# 7. Backtest Estrategias (TODO)
-jupyter notebook notebooks/03_backtest_strategies.ipynb
+# 7. Pipeline ML (RF → Tree → Reglas)
+jupyter notebook notebooks/05_strategy_builder.ipynb
+
+# 8. Backtest + Validación OOS
+jupyter notebook notebooks/06_backtest_strategies.ipynb
 ```
 
 ---
@@ -134,19 +130,15 @@ jupyter notebook notebooks/03_backtest_strategies.ipynb
 Todos los parámetros en `config/settings.py`:
 
 ```python
-from config.settings import DATA, FEATURES, RISK, BACKTEST, SIGNALS
-
-# Data
-print(DATA.interval)        # '1h'
-print(DATA.price_min)       # 1.0
-
-# Features
-print(FEATURES.atr_period)  # 50
-print(FEATURES.er_k)        # 10
+from config.settings import DATA, FEATURES, RISK, BACKTEST
 
 # Risk
+print(RISK.risk_per_trade)      # $100
 print(RISK.lookforward_window)  # 20
-print(RISK.csl_admission_range) # (1.5, 3.0)
+
+# Features
+print(FEATURES.er_k)            # 10
+print(FEATURES.atr_period)      # 50
 
 # Backtest
 print(BACKTEST.max_bars)        # 40
@@ -155,18 +147,42 @@ print(BACKTEST.tp_sl_ratio)     # 1.5
 
 ---
 
-## ⚠️ Advertencias Importantes
+## ⚠️ Restricción de Datos
 
-1. **NO hay estrategias hardcodeadas**: El backtester es una herramienta genérica. Las estrategias deben generarse explícitamente en `02_strategy_generator.ipynb`.
-2. **Csl calibrado por activo**: Cada ticker tiene su propio Csl óptimo (no usar un valor fijo).
-3. **Sin comisiones**: Por ahora `BACKTEST.commission_per_share = 0.0`. Añadir cuando tengas datos realistas.
-4. **Data de yfinance**: 730 días máx en 1h. Para 6 años completos necesitas CSV de TradeStation (mismo formato, ajustar en `src/data.py`).
+**ÚNICA fuente:** Velas OHLCV horarias (Open, High, Low, Close, Volume, timestamp).
+
+**NADA se usa de Float, Market Cap, EV, etc.** (no existen gratis con granularidad horaria histórica).
 
 ---
 
-## 📄 Licencia
+## 📄 Métodología (Fases 1-12)
 
-MIT License — ver [LICENSE](./LICENSE).
+### Separación de Responsabilidades
+- **Risk (src/risk.py)**: Determinístico, ya verificado (Csl, SIZE, TP/SL, BP).
+- **ML (src/strategy_builder.py)**: Descubre patrones bajo los cuales el Risk tiene mejor probabilidad de éxito.
+
+### Pipeline Completo
+1. **Datos**: OHLCV de tickers admitidos.
+2. **Features**: ~20 indicadores.
+3. **Simulación**: Para cada vela, calcular SIZE, SL, TP usando `src/risk.py`.
+4. **Etiquetado**: Triple Barrier (0/1/2) max 40 velas forward.
+5. **Split**: 70% train (cronológico inicial), 30% test (final).
+6. **Random Forest**: Sobre TODOS los ~20 features → feature_importance.
+7. **Selección**: Top 3-5 features por RF.
+8. **Decision Tree**: max_depth=3/4, min_samples_leaf=30.
+9. **Reglas**: Cada hoja → estrategia si P(TP)>0.5 y n>=30.
+10. **Backtest**: Usar `run_backtest_loop()` para cada regla (train).
+11. **Validación OOS**: Backtest en 30% test → PF_test >= 0.70 * PF_train.
+12. **Library**: Estrategias validadas guardadas en `data/strategies_library.json`.
+
+---
+
+## ⚠️ Advertencias
+
+1. **No hay walk-forward**: Split temporal simple 70/30.
+2. **No hay reinforcement desde OOS**: Las reglas se extraen solo del 70% train.
+3. **Backtester reutilizado**: No se reimplementa el motor, se llama a `run_backtest_loop()`.
+4. **Comisiones = 0 por ahora**: Añadir cuando tengas datos realistas.
 
 ---
 
