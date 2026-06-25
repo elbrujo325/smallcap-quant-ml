@@ -34,6 +34,8 @@ from src.features import (
     calculate_candle_range,
     calculate_upper_wick,
     calculate_lower_wick,
+    calculate_efficiency_ratio,
+    filter_momentum_entries,
     add_all_features,
     generate_entry_signal,
 )
@@ -69,6 +71,8 @@ __all__ = [
     "calculate_candle_range",
     "calculate_upper_wick",
     "calculate_lower_wick",
+    "calculate_efficiency_ratio",
+    "filter_momentum_entries",
     "add_all_features",
     "generate_entry_signal",
     # risk

@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from typing import Tuple, Optional, Dict, List
 
-from src.features import calculate_atr as _calc_atr
+from src.features import calculate_atr as _calc_atr, filter_momentum_entries
 
 
 def calculate_atr(df: pd.DataFrame, period: int = 50) -> pd.Series:
@@ -88,43 +88,146 @@ def calculate_buying_power(entry_price: float, atr: float,
     return entry_price * size
 
 
-def find_optimal_coef_sl(entries_info: List[Tuple],
-                         target_bp_min: float = 1200,
-                         target_bp_max: float = 1500,
-                         risk_per_trade: float = 100) -> Tuple[Optional[float], Optional[float]]:
+def find_optimal_coef_sl(df: pd.DataFrame, n_samples: int = 500,
+                         lookforward_window: int = 20, atr_period: int = 50,
+                         price_min: float = 1.0, price_max: float = 20.0,
+                         momentum_k: int = 10, momentum_threshold: float = 0.3,
+                         admission_range: Tuple[float, float] = (1.5, 3.0),
+                         seed: int = 42) -> Optional[float]:
     """
-    Find optimal SL coefficient that keeps Buying Power in target range.
+    Calibra C_sl (metodologia.pdf Sección 5, Ecuación 14) como la MEDIANA
+    de caídas implícitas en n_samples entradas aleatorias, filtradas por
+    precio small-cap y momentum alcista (Efficiency Ratio). Devuelve None
+    si el activo no admite (datos insuficientes o mediana fuera de rango).
 
-    NOT IMPLEMENTED: This function requires the full methodology from
-    docs/metodologia.pdf Section 5, which specifies:
-    1. Receive full OHLC DataFrame + valid random entry indices (not pre-computed ATR entries)
-    2. For each entry: Δ_i = entry_price - min(Low over next 20 bars), coef_sl_implicit_i = Δ_i / ATR(50)_i
-    3. MEDIAN of {coef_sl_implicit_1...500} → Csl (not mean, not BP-targeted search)
-    4. Admission filter: if median ∉ [1.5, 3.0] → discard asset (return None or raise)
-    5. ONLY AFTER fixing Csl median, calculate BP distribution on independent 500-entry sample
-       and verify median BP ∈ [$100, $1800] and max BP ≤ $3000
-    6. Csl calibration NEVER targets a BP range; BP is verified AFTER, not optimized into.
-
-    Current implementation in notebooks/02_risk_calibration.ipynb uses a
-    BP-targeted search (Phase 2) which CONTRADICTS the documented methodology.
+    Esta función NUNCA debe buscar un valor que produzca un Buying Power
+    objetivo. Esa verificación va en calculate_buying_power_distribution(),
+    como paso SEPARADO Y POSTERIOR.
 
     Args:
-        entries_info: List of (idx, entry_price, atr) tuples (legacy signature)
-        target_bp_min: Minimum target Buying Power (legacy, ignored)
-        target_bp_max: Maximum target Buying Power (legacy, ignored)
-        risk_per_trade: Risk per trade in dollars (legacy, ignored)
+        df: DataFrame OHLC completo con columnas 'High', 'Low', 'Close'
+        n_samples: Número de entradas a muestrear (default 500)
+        lookforward_window: Ventana forward para medir caída máxima (default 20)
+        atr_period: Período para ATR (default 50)
+        price_min: Precio mínimo para universo small-cap (default $1.0)
+        price_max: Precio máximo para universo small-cap (default $20.0)
+        momentum_k: Ventana para Efficiency Ratio (default 10)
+        momentum_threshold: Umbral de ER para admitir momentum alcista (default 0.3)
+        admission_range: Rango admisible para Csl mediana (default (1.5, 3.0))
+        seed: Semilla aleatoria para reproducibilidad (default 42)
 
     Returns:
-        (None, None) - function not implemented per methodology
+        C_sl mediana si cumple criterios de admisión, None en caso contrario
 
     Raises:
-        NotImplementedError: Always - see methodology document
+        None -返回 None silenciosamente cuando el activo no admite
     """
-    raise NotImplementedError(
-        "Csl calibration - pending correct implementation per metodologia.pdf Section 5. "
-        "Current notebook logic (BP-targeted search) contradicts documented methodology. "
-        "See src/risk.py docstring for required steps."
-    )
+    df = df.copy()
+    df['ATR'] = calculate_atr(df, period=atr_period)
+
+    # Paso 1: filtro de universo (precio + momentum)
+    valid_range = df.index[(df.index >= atr_period) &
+                           (df.index <= len(df) - lookforward_window - 1)]
+    price_ok = df.loc[valid_range, 'Close'].between(price_min, price_max)
+    momentum_idx = set(filter_momentum_entries(df, k=momentum_k,
+                                               er_threshold=momentum_threshold))
+    candidates = [i for i in valid_range[price_ok.values] if i in momentum_idx]
+
+    if len(candidates) < 30:
+        return None  # datos insuficientes tras filtrar
+
+    # Paso 2: muestreo aleatorio
+    rng = np.random.RandomState(seed)
+    sampled = rng.choice(candidates, size=min(n_samples, len(candidates)),
+                         replace=False)
+
+    # Paso 3: coeficiente implícito por entrada (Ecuación 14)
+    coefs_sl = []
+    for idx in sampled:
+        atr = df.at[idx, 'ATR']
+        if pd.isna(atr) or atr <= 0:
+            continue
+        p_entry = df.at[idx, 'Close']
+        p_min = df['Low'].iloc[idx + 1: idx + 1 + lookforward_window].min()
+        c_sl = (p_entry - p_min) / atr
+        if c_sl > 0:
+            coefs_sl.append(c_sl)
+
+    if len(coefs_sl) < 30:
+        return None
+
+    # Paso 4: MEDIANA (no búsqueda, no promedio)
+    c_sl_median = float(np.median(coefs_sl))
+
+    # Paso 5: filtro de admisión, independiente del BP
+    low, high = admission_range
+    if not (low <= c_sl_median <= high):
+        return None
+
+    return c_sl_median
+
+
+def calculate_buying_power_distribution(df: pd.DataFrame, c_sl: float,
+                                        n_samples: int = 500,
+                                        lookforward_window: int = 20,
+                                        atr_period: int = 50,
+                                        price_min: float = 1.0,
+                                        price_max: float = 20.0,
+                                        risk_per_trade: float = 100.0,
+                                        seed: int = 7) -> dict:
+    """
+    metodologia.pdf Sección 6.2: segunda ronda INDEPENDIENTE de 500
+    entradas (semilla distinta), usando el c_sl YA FIJO, únicamente para
+    VERIFICAR (nunca optimizar) el Buying Power.
+
+    Admisión (Sección 6.3): mediana(BP) en [$100,$1800] y máx(BP) ≤ $3000.
+
+    Args:
+        df: DataFrame OHLC completo con columnas 'High', 'Low', 'Close'
+        c_sl: Coeficiente C_sl YA FIJO desde find_optimal_coef_sl()
+        n_samples: Número de entries a muestrear (default 500)
+        lookforward_window: Ventana forward (default 20)
+        atr_period: Período ATR (default 50)
+        price_min: Precio mínimo small-cap (default $1.0)
+        price_max: Precio máximo small-cap (default $20.0)
+        risk_per_trade: Riesgo por trade en dólares (default $100)
+        seed: Semilla aleatoria (default 7 - distinta de find_optimal_coef_sl)
+
+    Returns:
+        Dict con:
+        - median_bp: Mediana del Buying Power calculado
+        - max_bp: Valor máximo del Buying Power
+        - admitted: True si cumple criterios (100 ≤ median ≤ 1800 y max ≤ 3000)
+        - n_valid_samples: Número de muestras válidas procesadas
+    """
+    df = df.copy()
+    df['ATR'] = calculate_atr(df, period=atr_period)
+    valid_range = df.index[(df.index >= atr_period) &
+                           (df.index <= len(df) - lookforward_window - 1)]
+    price_ok = df.loc[valid_range, 'Close'].between(price_min, price_max)
+    candidates = valid_range[price_ok.values]
+
+    rng = np.random.RandomState(seed)
+    sampled = rng.choice(candidates, size=min(n_samples, len(candidates)),
+                         replace=False)
+
+    bp_values = []
+    for idx in sampled:
+        atr = df.at[idx, 'ATR']
+        if pd.isna(atr) or atr <= 0:
+            continue
+        size = risk_per_trade / (c_sl * atr)
+        bp_values.append(df.at[idx, 'Close'] * size)
+
+    if not bp_values:
+        return {'median_bp': None, 'max_bp': None, 'admitted': False,
+                'n_valid_samples': 0}
+
+    median_bp = float(np.median(bp_values))
+    max_bp = float(np.max(bp_values))
+    admitted = (100 <= median_bp <= 1800) and (max_bp <= 3000)
+    return {'median_bp': median_bp, 'max_bp': max_bp, 'admitted': admitted,
+            'n_valid_samples': len(bp_values)}
 
 
 def calculate_trade_duration(df: pd.DataFrame, entry_idx: int,

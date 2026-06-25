@@ -99,6 +99,62 @@ def calculate_lower_wick(df: pd.DataFrame) -> pd.Series:
     return df[['Open', 'Close']].min(axis=1) - df['Low']
 
 
+def calculate_efficiency_ratio(df: pd.DataFrame, k: int = 10,
+                               column: str = 'Close') -> pd.Series:
+    """
+    Kaufman Efficiency Ratio, adaptado para momentum direccional ALCISTA
+    (sin valor absoluto en el numerador, porque el sistema es long-only).
+
+    ER cercano a 1 = movimiento direccional alcista limpio.
+    ER cercano a 0 = lateralización o movimiento errático.
+    ER negativo = movimiento neto bajista (se descarta para entradas long).
+
+    k=10 velas: elegido como la mitad de la ventana de 20 velas usada
+    para medir la caída máxima en el cálculo de Csl (metodologia.pdf
+    Sección 5.1.2), no por la duración nominal de la vela (1h).
+
+    Reference: Kaufman, P. (1995). Smarter Trading. Adapted: signed
+    numerator restricts admission to bullish momentum only, consistent
+    with the long-only constraint in metodologia.pdf Section 3.2.
+    """
+    price = df[column]
+    net_change = price - price.shift(k)
+    path_length = price.diff().abs().rolling(window=k).sum()
+    er = net_change / path_length
+    return er
+
+
+def filter_momentum_entries(df: pd.DataFrame, k: int = 10,
+                            er_threshold: float = 0.3,
+                            column: str = 'Close') -> np.ndarray:
+    """
+    Filtro de momentum (metodologia.pdf Sección 5.1.1): admite solo
+    índices donde el Efficiency Ratio supera er_threshold, descartando
+    zonas de lateralización o momentum bajista.
+    """
+    er = calculate_efficiency_ratio(df, k=k, column=column)
+    valid = er > er_threshold
+    return df.index[valid.fillna(False)].to_numpy()
+
+
+# Test numérico rápido para verificar la implementación
+if __name__ == '__main__':
+    import pandas as pd
+    import numpy as np
+    
+    # Test 1: Movimiento direccional alcista
+    closes_1 = [100, 101, 100, 102, 103, 102, 104, 105, 104, 106, 108]
+    df1 = pd.DataFrame({'Close': closes_1})
+    er1 = calculate_efficiency_ratio(df1, k=10).iloc[-1]
+    print(f"Test 1 (alcista): ER = {er1:.3f} (esperado ~0.571)")
+    
+    # Test 2: Lateralización
+    closes_2 = [100, 103, 99, 102, 98, 101, 97, 100, 103, 99, 100]
+    df2 = pd.DataFrame({'Close': closes_2})
+    er2 = calculate_efficiency_ratio(df2, k=10).iloc[-1]
+    print(f"Test 2 (lateral): ER = {er2:.3f} (esperado ~0.0)")
+
+
 def add_all_features(df: pd.DataFrame, atr_period: int = 50,
                      sma_period: int = 10, roc_period: int = 5) -> pd.DataFrame:
     """

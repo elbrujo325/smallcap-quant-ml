@@ -81,6 +81,8 @@ jupyter lab notebooks/
 
 > **⚠️ Important: TP/SL Ratio** — Per documented methodology (`docs/metodologia.pdf`), `Ctp = 1.5 × Csl` (ratio 1:1.5) is the default. Legacy backtests used 1.68 for historical comparison only — see `src/risk.py` for explicit override notes.
 
+**Efficiency Ratio Momentum Filter (Implemented):** Kaufman's Efficiency Ratio adapted for **bullish-only momentum** (signed numerator, no absolute value) — consistent with the long-only constraint (Sec. 3.2). Window `k=10` chosen as half the 20-bar lookforward window used for Csl drop measurement (Sec. 5.1.2). Entries require `ER > 0.3` to admit clean directional uptrends, discarding sideways/bearish zones.
+
 **Triple Barrier Labeling (Planned):** López de Prado's method for sample labeling — profit target, stop loss, and vertical (time) barriers — enabling meta-labeling for primary model filtering.
 
 **LightGBM Modeling (Planned):** Gradient boosting on engineered features with walk-forward validation, class-weighted training for imbalanced labels, and Optuna hyperparameter optimization.
@@ -112,7 +114,7 @@ jupyter lab notebooks/
 |-----------|--------|---------|
 | **Data Loading** | ✅ Done | `src/data.py` — yfinance, CSV, multi-asset |
 | **Feature Engineering** | ✅ Done | `src/features.py` — ATR, SMA, ROC, structure, candles |
-| **Risk Management** | 🔲 Partial | `src/risk.py` — SL/TP/sizing/backtest loop implemented; **`find_optimal_coef_sl()` pending correct implementation per methodology.pdf Sec.5** (raises NotImplementedError) |
+| **Risk Management** | ✅ Done | `src/risk.py` — SL/TP/sizing/backtest loop + **`find_optimal_coef_sl()` (mediana Csl) + `calculate_buying_power_distribution()` (verificación BP independiente)** implementados per metodologia.pdf Sec.5-6 |
 | **EDA & Backtest Notebook** | ✅ Done | `01_eda.ipynb` — complete pipeline with metrics & plots |
 | **Risk Calibration Notebook** | ✅ Done | `02_risk_calibration.ipynb` — empirical coef_SL optimization (BP-targeted fallback) |
 | **Backtest Evaluation Notebook** | ✅ Done | `03_backtest_evaluation.ipynb` — MFE/MAE, TP quality |
@@ -184,7 +186,6 @@ mypy src/
 
 | Issue | Location | Impact |
 |-------|----------|--------|
-| `find_optimal_coef_sl()` not implemented | `src/risk.py` | Raises `NotImplementedError`; legacy notebook uses BP-targeted fallback |
 | TP/SL ratio 1.5 vs 1.68 | `src/risk.py`, notebooks | Methodology says 1.5; legacy code uses 1.68 — explicit override required |
 | No `assets/` pre-committed | Repo root | Run notebook to generate images; don't commit stale screenshots |
 
