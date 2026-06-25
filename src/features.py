@@ -6,7 +6,7 @@ All OHLCV-based, no external data (Float, Market Cap, etc.).
 
 import pandas as pd
 import numpy as np
-from typing Optional, Tuple
+from typing import Optional, Tuple
 
 
 def calculate_atr(df: pd.DataFrame, period: int = 14, high_col: str = 'High',
@@ -149,7 +149,7 @@ def add_all_features_v2(df: pd.DataFrame) -> pd.DataFrame:
     # 3-6. EMA20, EMA50 + distancias %
     df['EMA_20'] = calculate_ema(df, period=20)
     df['EMA_50'] = calculate_ema(df, period=50)
-    df['dist_ema20_pct'] = (df['Close'] - df['EMA_20']) / df[' EMA_20'] * 100
+    df['dist_ema20_pct'] = (df['Close'] - df['EMA_20']) / df['EMA_20'] * 100
     df['dist_ema50_pct'] = (df['Close'] - df['EMA_50']) / df['EMA_50'] * 100
     
     # 7-8. VWAP rodante + distancia %
@@ -227,3 +227,23 @@ if __name__ == '__main__':
     df_test = add_all_features_v2(df_test)
     print("Features creadas:")
     print([c for c in df_test.columns if c not in ['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']])
+
+
+def generate_entry_signal(df: pd.DataFrame,
+                          price_min: float = 1.0,
+                          price_max: float = 20.0) -> pd.Series:
+    """
+    Generate entry signal based on standard criteria.
+
+    Conditions:
+    - Price in small-cap range
+    - Price above SMA (trend)
+    - ROC decaying (momentum fading)
+    - Favorable price structure
+    """
+    return (
+        (df['Close'] > price_min) & (df['Close'] <= price_max) &
+        (df['Close'] > df['SMA_10']) &
+        (df['ROC_10'] < df['ROC_10'].shift(3)) &
+        (df['Close'].shift(7) > df['High'].shift(9))
+    )

@@ -6,11 +6,12 @@ Modules:
 - data: Data loading (yfinance, CSV, multi-asset)
 - features: Technical indicators & feature engineering
 - risk: ATR SL/TP, position sizing, backtest engine
-- labeling: Triple barrier labeling (stubs - TODO)
+- labeling: Triple barrier labeling
+- strategy_builder: RF → Feature Selection → Decision Tree → Rules
 - model: LightGBM, walk-forward validation (stubs - TODO)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Henry Paolo Alfaro Sotil"
 
 # Public API
@@ -26,17 +27,18 @@ from src.features import (
     calculate_atr,
     calculate_sma,
     calculate_ema,
-    calculate_roc,
     calculate_rsi,
-    calculate_bollinger_bands,
-    calculate_price_structure,
-    calculate_candle_body,
-    calculate_candle_range,
-    calculate_upper_wick,
-    calculate_lower_wick,
+    calculate_macd,
+    calculate_vwap,
+    calculate_adx,
+    calculate_momentum,
+    calculate_volatility,
+    calculate_gap,
+    calculate_rvol,
     calculate_efficiency_ratio,
+    calculate_bollinger_dist,
+    add_all_features_v2,
     filter_momentum_entries,
-    add_all_features,
     generate_entry_signal,
 )
 
@@ -52,6 +54,17 @@ from src.risk import (
     calculate_performance_metrics,
 )
 
+from src.labeling import (
+    triple_barrier_label,
+    apply_triple_barrier_to_dataset,
+    create_labeled_dataset,
+)
+
+from src.strategy_builder import (
+    StrategyBuilder,
+    StrategyRule,
+)
+
 __all__ = [
     # data
     "load_ohlc_from_yfinance",
@@ -63,17 +76,18 @@ __all__ = [
     "calculate_atr",
     "calculate_sma",
     "calculate_ema",
-    "calculate_roc",
     "calculate_rsi",
-    "calculate_bollinger_bands",
-    "calculate_price_structure",
-    "calculate_candle_body",
-    "calculate_candle_range",
-    "calculate_upper_wick",
-    "calculate_lower_wick",
+    "calculate_macd",
+    "calculate_vwap",
+    "calculate_adx",
+    "calculate_momentum",
+    "calculate_volatility",
+    "calculate_gap",
+    "calculate_rvol",
     "calculate_efficiency_ratio",
+    "calculate_bollinger_dist",
+    "add_all_features_v2",
     "filter_momentum_entries",
-    "add_all_features",
     "generate_entry_signal",
     # risk
     "calculate_sl_tp",
@@ -84,4 +98,11 @@ __all__ = [
     "calculate_durations_multiple_ratios",
     "run_backtest_loop",
     "calculate_performance_metrics",
+    # labeling
+    "triple_barrier_label",
+    "apply_triple_barrier_to_dataset",
+    "create_labeled_dataset",
+    # strategy_builder
+    "StrategyBuilder",
+    "StrategyRule",
 ]

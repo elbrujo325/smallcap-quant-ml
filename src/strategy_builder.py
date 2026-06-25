@@ -178,13 +178,22 @@ class StrategyBuilder:
         tree = self.tree_model
         n_features = len(feature_names)
         
-        # Get tree structure
-        n_nodes = tree.node_count
-        children_left = tree.children_left
-        children_right = tree.children_right
-        feature = tree.feature
-        threshold = tree.threshold
-        value = tree.value  # Class counts per node
+        # Get tree structure (sklearn >= 1.4 uses tree_ attribute)
+        if hasattr(tree, 'tree_'):
+            n_nodes = tree.tree_.node_count
+            children_left = tree.tree_.children_left
+            children_right = tree.tree_.children_right
+            feature = tree.tree_.feature
+            threshold = tree.tree_.threshold
+            value = tree.tree_.value  # Class counts per node
+        else:
+            # Legacy fallback
+            n_nodes = tree.node_count
+            children_left = tree.children_left
+            children_right = tree.children_right
+            feature = tree.feature
+            threshold = tree.threshold
+            value = tree.value  # Class counts per node
         
         strategies = []
         
