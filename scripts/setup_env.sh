@@ -14,7 +14,7 @@ echo "Activating virtualenv at $VE_DIR"
 source "$VE_DIR/bin/activate"
 
 echo "Installing requirements from requirements.txt"
-pip install --upgrade pip
+python3 -m pip install --upgrade pip setuptools wheel
 pip install -r "$ROOT_DIR/requirements.txt"
 
 echo "Environment ready. Activate with: source $VE_DIR/bin/activate"

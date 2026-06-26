@@ -105,10 +105,12 @@ smallcap-quant-ml/
 	- `source .venv/bin/activate`
 - **Instalar dependencias:**
 	- Recomendado (automático): `./scripts/setup_env.sh`
-	- Manual: `pip install -r requirements.txt`
+	- Manual: `python3 -m pip install -r requirements.txt`
+	- Opcional para desarrollo local: `python3 -m pip install -e .`
 	- Nota: `requirements-lock.txt` se ha eliminado para mantener la portabilidad y evitar pines de entorno dependientes de la máquina.
 - **Verificaciones rápidas (smoke tests):**
 	- `python -c "import importlib,sys; sys.path.insert(0,'.'); m=importlib.import_module('src'); print('features_v2:', hasattr(m,'add_all_features_v2'))"`
+	- `python -c "import src; print('src version:', src.__version__)"`
 	- `python src/features.py`  # ejecuta el test incluido
 	- `python src/labeling.py`  # ejecuta el test incluido
 - **Generar universo admitido (calibración Csl + BP):**
@@ -138,6 +140,7 @@ smallcap-quant-ml/
 
 - **Orden mínimo recomendado de ejecución (scripts → notebooks):**
 	- `./scripts/setup_env.sh` (o crear .venv e instalar deps)
+	- Opcional: `python3 -m pip install -e .` para trabajar con el package instalado en modo editable
 	- `python scripts/batch_calibrate.py` (crea `data/universe_admitted.csv`)
 	- Abrir y ejecutar `notebooks/01_eda.ipynb` (EDA)
 	- Ejecutar `notebooks/03_feature_engineering.ipynb` (features batch)

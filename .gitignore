@@ -26,6 +26,9 @@ data/*.csv
 *.swp
 *.swo
 
+# Packaging
+*.egg-info/
+
 # OS
 .DS_Store
 Thumbs.db
