@@ -42,7 +42,9 @@ smallcap-quant-ml/
 │   ├── risk.py                       # **BACKTESTER + Risk** (Csl, SIZE, TP/SL)
 │   ├── labeling.py                   # Triple Barrier
 │   ├── strategy_builder.py           # RF → Tree → Rules (NUEVO)
-│   └── model.py                      # Referencia opcional
+├── docs/
+│   └── legacy/
+│       └── model.py                 # Legacy LightGBM stub
 ├── data/
 │   ├── calibration_all.csv           # 22 tickers probados
 │   ├── universe_admitted.csv         # Activos admitidos (Csl+BP ok) ✅
@@ -104,7 +106,7 @@ smallcap-quant-ml/
 - **Instalar dependencias:**
 	- Recomendado (automático): `./scripts/setup_env.sh`
 	- Manual: `pip install -r requirements.txt`
-	- Para reproducir exactamente el entorno del autor (opcional): `pip install -r requirements-lock.txt`
+	- Nota: `requirements-lock.txt` se ha eliminado para mantener la portabilidad y evitar pines de entorno dependientes de la máquina.
 - **Verificaciones rápidas (smoke tests):**
 	- `python -c "import importlib,sys; sys.path.insert(0,'.'); m=importlib.import_module('src'); print('features_v2:', hasattr(m,'add_all_features_v2'))"`
 	- `python src/features.py`  # ejecuta el test incluido
