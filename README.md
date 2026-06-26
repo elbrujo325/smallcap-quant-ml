@@ -97,58 +97,95 @@ smallcap-quant-ml/
 
 ## 🚀 Quick Start
 
-**Cómo iniciar (Paso a paso, reproducible)**
+### 🔗 Copiar y pegar todo en terminal (para laptop fresca)
 
-- **Clonar y entrar al repositorio:** `git clone <repo-url>` y `cd smallcap-quant-ml`.
-- **Crear y activar entorno virtual (recomendado):**
-	- `python3 -m venv .venv`
-	- `source .venv/bin/activate`
-- **Instalar dependencias:**
-	- Recomendado (automático): `./scripts/setup_env.sh`
-	- Manual: `python3 -m pip install -r requirements.txt`
-	- Opcional para desarrollo local: `python3 -m pip install -e .`
-	- Nota: `requirements-lock.txt` se ha eliminado para mantener la portabilidad y evitar pines de entorno dependientes de la máquina.
-- **Verificaciones rápidas (smoke tests):**
-	- `python -c "import importlib,sys; sys.path.insert(0,'.'); m=importlib.import_module('src'); print('features_v2:', hasattr(m,'add_all_features_v2'))"`
-	- `python -c "import src; print('src version:', src.__version__)"`
-	- `python src/features.py`  # ejecuta el test incluido
-	- `python src/labeling.py`  # ejecuta el test incluido
-- **Generar universo admitido (calibración Csl + BP):**
-	- `python scripts/batch_calibrate.py`
-	- Esto genera `data/universe_admitted.csv` necesario para notebooks de backtest.
-- **Abrir Jupyter / ejecutar notebooks en orden (recomendado):**
-	1. `notebooks/01_eda.ipynb` — EDA y checks de calidad
-	2. `notebooks/03_feature_engineering.ipynb` — calcular ~20 indicadores
-	3. `notebooks/04_labeling.ipynb` — aplicar triple-barrier labeling
-	4. `notebooks/05_strategy_builder.ipynb` — RF → selección → reglas
-	5. `notebooks/06_backtest_strategies.ipynb` — backtest y validación OOS
+Copia y ejecuta este bloque completo en tu terminal. Al terminar, abre VSCode o tu editor favorito y ejecuta los notebooks:
 
-	- Abrir Jupyter: `jupyter notebook` o `jupyter lab` y, antes de ejecutar, **reiniciar el kernel** y asegurarse de seleccionar el intérprete del entorno `.venv`.
-	- Si no quieres reiniciar el kernel, añade al inicio de la notebook la celda:
-		```python
-		%load_ext autoreload
-		%autoreload 2
-		import importlib, sys
-		sys.path.insert(0, str(Path.cwd().parent))
-		import src.features
-		importlib.reload(src.features)
-		```
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/elbrujo325/smallcap-quant-ml.git
+cd smallcap-quant-ml
 
-- **Comprobaciones VSCode/Jupyter:**
-	- Asegúrate de que el kernel/interpretador apunta a `.venv/bin/python`.
-	- Si usas Jupyter y quieres un kernel nombrado: `python -m ipykernel install --user --name=smallcap-quant-ml --display-name "smallcap-quant-ml (.venv)"`.
+# 2. Crear entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate
 
-- **Orden mínimo recomendado de ejecución (scripts → notebooks):**
-	- `./scripts/setup_env.sh` (o crear .venv e instalar deps)
-	- Opcional: `python3 -m pip install -e .` para trabajar con el package instalado en modo editable
-	- `python scripts/batch_calibrate.py` (crea `data/universe_admitted.csv`)
-	- Abrir y ejecutar `notebooks/01_eda.ipynb` (EDA)
-	- Ejecutar `notebooks/03_feature_engineering.ipynb` (features batch)
-	- Ejecutar `notebooks/04_labeling.ipynb` (labeling)
-	- Ejecutar `notebooks/05_strategy_builder.ipynb` (RF → reglas)
-	- Ejecutar `notebooks/06_backtest_strategies.ipynb` (backtest OOS)
+# 3. Instalar dependencias (automático + setuptools + wheel para reproducibilidad)
+./scripts/setup_env.sh
 
-Si algo falla durante la importación, revisa que `REPO_ROOT` en las notebooks apunte a la raíz del repo y que el kernel esté usando la `python` de `.venv`.
+# 4. Instalar el paquete en modo editable (para desarrollo)
+python3 -m pip install -e .
+
+# 5. Verificar que todo está correcto
+python -c "import src; print('✅ src version:', src.__version__)"
+python src/features.py
+python src/labeling.py
+
+# 6. Generar universo admitido (calibración de riesgo)
+python scripts/batch_calibrate.py
+
+# 7. Listo para abrir en VSCode o Jupyter
+# Sigue los pasos abajo para ejecutar los notebooks
+```
+
+### 📓 Después de ejecutar los comandos anteriores:
+
+1. **Abre VSCode:**
+   ```bash
+   code .
+   ```
+   O abre tu editor de código favorito en la carpeta `smallcap-quant-ml`.
+
+2. **Abre Jupyter Lab o Notebook:**
+   ```bash
+   jupyter lab
+   # o
+   jupyter notebook
+   ```
+
+3. **Ejecuta los notebooks en este orden:**
+   - `notebooks/01_eda.ipynb` — Exploración y calidad de datos
+   - `notebooks/03_feature_engineering.ipynb` — Cálculo de ~20 indicadores
+   - `notebooks/04_labeling.ipynb` — Triple barrier labeling
+   - `notebooks/05_strategy_builder.ipynb` — Random Forest → Feature selection → Reglas
+   - `notebooks/06_backtest_strategies.ipynb` — Backtest y validación OOS
+
+### ⚙️ Configuración de Kernel en VSCode/Jupyter:
+
+Si Jupyter no carga el kernel correcto automáticamente, usa:
+
+```bash
+# Registrar kernel personalizado
+python -m ipykernel install --user --name=smallcap-quant-ml --display-name "smallcap-quant-ml (.venv)"
+
+# Luego en VSCode/Jupyter, selecciona este kernel antes de ejecutar las notebooks
+```
+
+---
+
+## 📋 Explicación detallada de cada paso
+
+**Clonar y entrar al repositorio:**
+- Descarga el código fuente desde GitHub a tu laptop local
+
+**Crear y activar entorno virtual:**
+- Aísla las dependencias de este proyecto del resto del sistema
+- Necesario para reproducibilidad
+
+**Instalar dependencias:**
+- `./scripts/setup_env.sh`: script automatizado que instala pip, setuptools, wheel y todos los requisitos
+- Manual: `python3 -m pip install -r requirements.txt` si quieres hacerlo paso a paso
+- Opcional: `python3 -m pip install -e .` para trabajar con el package en modo desarrollo
+
+**Verificaciones rápidas (smoke tests):**
+- Comprueba que todos los módulos principales carguen correctamente
+- Ejecuta tests simples en `src/features.py` y `src/labeling.py`
+
+**Generar universo admitido:**
+- `python scripts/batch_calibrate.py` calibra Csl y verifica Buying Power
+- Genera `data/universe_admitted.csv` que necesitan los notebooks
+
+**Ejecutar notebooks en orden:**
 
 ---
 
