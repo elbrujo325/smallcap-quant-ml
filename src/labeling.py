@@ -184,7 +184,8 @@ if __name__ == '__main__':
     n = 100
     prices = 10 + 2 * np.cumsum(np.random.randn(n) * 0.05)
     df_test = pd.DataFrame({
-        'Datetime': pd.date_range('2025-01-01', periods=n, freq='H'),
+        # use lower-case freq for wider pandas compatibility
+        'Datetime': pd.date_range('2025-01-01', periods=n, freq='h'),
         'Open': prices,
         'High': prices * (1 + np.abs(np.random.randn(n) * 0.01)),
         'Low': prices * (1 - np.abs(np.random.randn(n) * 0.01)),

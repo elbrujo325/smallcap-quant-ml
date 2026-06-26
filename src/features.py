@@ -133,9 +133,10 @@ def calculate_bollinger_dist(df: pd.DataFrame, period: int = 20, num_std: float 
     return dist_upper, dist_lower
 
 
-def add_all_features_v2(df: pd.DataFrame) -> pd.DataFrame:
+def add_all_features_v2(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """
     Add ALL ~20 indicators for ML feature engineering (Fase 2).
+    Accepts optional keyword arguments for backward compatibility (ignored).
     Returns DataFrame with original OHLCV + all computed features.
     """
     df = df.copy()
@@ -192,10 +193,40 @@ def add_all_features_v2(df: pd.DataFrame) -> pd.DataFrame:
     df['Upper_Wick'] = df['High'] - df[['Open', 'Close']].max(axis=1)
     df['Lower_Wick'] = df[['Open', 'Close']].min(axis=1) - df['Low']
     
-    # Fill NaNs (for early rows)
-    df = df.fillna(method='ffill').fillna(method='bfill')
+    # Fill NaNs (for early rows) — use ffill/bfill methods for broad compatibility
+    df = df.ffill().bfill()
+
+    # Backwards compatibility aliases for older notebooks/scripts
+    # Keep short, commonly used names in notebooks (SMA, ATR, ER, RVOL, VWAP, ROC)
+    if 'SMA_10' in df.columns:
+        df['SMA'] = df['SMA_10']
+    if 'ATR_50' in df.columns:
+        df['ATR'] = df['ATR_50']
+    if 'ER_Kaufman_10' in df.columns:
+        df['ER'] = df['ER_Kaufman_10']
+    if 'RVOL_20' in df.columns:
+        df['RVOL'] = df['RVOL_20']
+    if 'VWAP_20' in df.columns:
+        df['VWAP'] = df['VWAP_20']
+    if 'ROC_10' in df.columns:
+        df['ROC'] = df['ROC_10']
+
+    # Placeholder for price structure column expected by notebooks
+    if 'Estructura_OK' not in df.columns:
+        df['Estructura_OK'] = True
     
     return df
+
+
+def add_all_features(df: pd.DataFrame, atr_period: int = 50, sma_period: int = 10, roc_period: int = 5) -> pd.DataFrame:
+    """
+    Backwards-compatible wrapper around `add_all_features_v2`.
+    Older notebooks/scripts call `add_all_features(df, atr_period, sma_period, roc_period)`;
+    keep the signature but delegate to the v2 implementation for now.
+    """
+    # Note: v2 currently computes a fixed set of features. We accept the
+    # parameters for API compatibility but do not use them individually yet.
+    return add_all_features_v2(df)
 
 
 def filter_momentum_entries(df: pd.DataFrame, k: int = 10,
@@ -216,7 +247,8 @@ if __name__ == '__main__':
     n = 1000
     prices = 5 + 3 * np.cumsum(np.random.randn(n) * 0.02)
     df_test = pd.DataFrame({
-        'Datetime': pd.date_range('2025-01-01', periods=n, freq='H'),
+        # Use lower-case frequency string for pandas compatibility across versions
+        'Datetime': pd.date_range('2025-01-01', periods=n, freq='h'),
         'Open': prices * (1 + np.random.randn(n) * 0.001),
         'High': prices * (1 + np.abs(np.random.randn(n)) * 0.002),
         'Low': prices * (1 - np.abs(np.random.randn(n)) * 0.002),

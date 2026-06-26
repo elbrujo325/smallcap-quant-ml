@@ -5,6 +5,7 @@ Todos los parámetros del pipeline en un solo lugar.
 
 from dataclasses import dataclass
 from typing import Tuple, List
+from pathlib import Path
 
 
 @dataclass
@@ -89,7 +90,12 @@ SIGNALS = SignalConfig()
 def load_tickers_from_file(filepath: str) -> List[str]:
     """Carga lista de tickers desde archivo (uno por línea, ignora # comentarios)."""
     try:
-        with open(filepath, 'r') as f:
+        p = Path(filepath)
+        # Si la ruta es relativa, resolverla respecto a la raíz del repo
+        if not p.is_absolute():
+            repo_root = Path(__file__).resolve().parent.parent
+            p = repo_root / filepath
+        with open(p, 'r') as f:
             tickers = [line.strip().upper() for line in f if line.strip() and not line.startswith('#')]
         return tickers
     except FileNotFoundError:

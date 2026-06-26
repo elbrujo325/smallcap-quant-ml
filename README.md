@@ -95,33 +95,55 @@ smallcap-quant-ml/
 
 ## 🚀 Quick Start
 
-```bash
-# 1. Clonar
-git clone https://github.com/elbrujo325/smallcap-quant-ml.git
-cd smallcap-quant-ml
+**Cómo iniciar (Paso a paso, reproducible)**
 
-# 2. Ambiente
-python -m venv .venv
-source .venv/bin/activate
+- **Clonar y entrar al repositorio:** `git clone <repo-url>` y `cd smallcap-quant-ml`.
+- **Crear y activar entorno virtual (recomendado):**
+	- `python3 -m venv .venv`
+	- `source .venv/bin/activate`
+- **Instalar dependencias:**
+	- Recomendado (automático): `./scripts/setup_env.sh`
+	- Manual: `pip install -r requirements.txt`
+	- Para reproducir exactamente el entorno del autor (opcional): `pip install -r requirements-lock.txt`
+- **Verificaciones rápidas (smoke tests):**
+	- `python -c "import importlib,sys; sys.path.insert(0,'.'); m=importlib.import_module('src'); print('features_v2:', hasattr(m,'add_all_features_v2'))"`
+	- `python src/features.py`  # ejecuta el test incluido
+	- `python src/labeling.py`  # ejecuta el test incluido
+- **Generar universo admitido (calibración Csl + BP):**
+	- `python scripts/batch_calibrate.py`
+	- Esto genera `data/universe_admitted.csv` necesario para notebooks de backtest.
+- **Abrir Jupyter / ejecutar notebooks en orden (recomendado):**
+	1. `notebooks/01_eda.ipynb` — EDA y checks de calidad
+	2. `notebooks/03_feature_engineering.ipynb` — calcular ~20 indicadores
+	3. `notebooks/04_labeling.ipynb` — aplicar triple-barrier labeling
+	4. `notebooks/05_strategy_builder.ipynb` — RF → selección → reglas
+	5. `notebooks/06_backtest_strategies.ipynb` — backtest y validación OOS
 
-# 3. Instalar
-pip install pandas numpy yfinance scikit-learn jupyter
+	- Abrir Jupyter: `jupyter notebook` o `jupyter lab` y, antes de ejecutar, **reiniciar el kernel** y asegurarse de seleccionar el intérprete del entorno `.venv`.
+	- Si no quieres reiniciar el kernel, añade al inicio de la notebook la celda:
+		```python
+		%load_ext autoreload
+		%autoreload 2
+		import importlib, sys
+		sys.path.insert(0, str(Path.cwd().parent))
+		import src.features
+		importlib.reload(src.features)
+		```
 
-# 4. Calibrar Csl + BP (si no tienes universe_admitted.csv)
-python scripts/batch_calibrate.py
+- **Comprobaciones VSCode/Jupyter:**
+	- Asegúrate de que el kernel/interpretador apunta a `.venv/bin/python`.
+	- Si usas Jupyter y quieres un kernel nombrado: `python -m ipykernel install --user --name=smallcap-quant-ml --display-name "smallcap-quant-ml (.venv)"`.
 
-# 5. Feature Engineering
-jupyter notebook notebooks/03_feature_engineering.ipynb
+- **Orden mínimo recomendado de ejecución (scripts → notebooks):**
+	- `./scripts/setup_env.sh` (o crear .venv e instalar deps)
+	- `python scripts/batch_calibrate.py` (crea `data/universe_admitted.csv`)
+	- Abrir y ejecutar `notebooks/01_eda.ipynb` (EDA)
+	- Ejecutar `notebooks/03_feature_engineering.ipynb` (features batch)
+	- Ejecutar `notebooks/04_labeling.ipynb` (labeling)
+	- Ejecutar `notebooks/05_strategy_builder.ipynb` (RF → reglas)
+	- Ejecutar `notebooks/06_backtest_strategies.ipynb` (backtest OOS)
 
-# 6. Labeling
-jupyter notebook notebooks/04_labeling.ipynb
-
-# 7. Pipeline ML (RF → Tree → Reglas)
-jupyter notebook notebooks/05_strategy_builder.ipynb
-
-# 8. Backtest + Validación OOS
-jupyter notebook notebooks/06_backtest_strategies.ipynb
-```
+Si algo falla durante la importación, revisa que `REPO_ROOT` en las notebooks apunte a la raíz del repo y que el kernel esté usando la `python` de `.venv`.
 
 ---
 
