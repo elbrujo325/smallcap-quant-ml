@@ -13,8 +13,8 @@
 |------|-----------------|-------------|--------|--------|
 | **1. Datos + Features** | `01_eda.ipynb` | EDA + calidad datos | `data/eda_summary.csv` | ✅ |
 | **2. Calibración Riesgo** | `batch_calibrate.py` | Csl + BP por activo | `data/universe_admitted.csv` | ✅ |
-| **3. Feature Engineering** | `03_feature_engineering.ipynb` | ~20 indicadores OHLCV | Features en memory/DISK | 🔲 |
-| **4. Triple Barrier Labeling** | `04_labeling.ipynb` | Etiquetado {0,1,2} | `data/labeled_*.csv` | ✅ |
+| **3. Feature Engineering** | `03_feature_engineering.ipynb` | ~20 indicadores OHLCV | `data/features/*.csv` | ✅ |
+| **4. Triple Barrier Labeling** | `04_labeling.ipynb` | Etiquetado {0,1,2} | `data/labeled/*.csv` | ✅ |
 | **5. RF + Feature Selection** | `05_strategy_builder.ipynb` | RF → Top N features | Feature importances | 🔲 |
 | **6. Decision Tree + Rules** | `05_strategy_builder.ipynb` | Tree (depth=3/4) | `data/strategies_candidates.json` | 🔲 |
 | **7. Backtest + OOS** | `06_backtest_strategies.ipynb` | Train⇆Test (70/30) | `data/strategies_library.json` | 🔲 |
@@ -82,12 +82,12 @@ smallcap-quant-ml/
 
 ### 1. **Feature Engineering en Batch** (Fase 2)
 - Calcular ~20 indicadores para todos los tickers admitidos.
-- Output: `data/features_*.csv`.
+- Output: `data/features/*.csv`.
 
 ### 2. **Triple Barrier Labeling** (Fase 4)
 - Etiquetar entradas para cada activo.
-- Output: `data/labeled_*.csv`.
-- Estado actual: ya existen archivos `data/labeled_*.csv` para los tickers admitidos.
+- Output: `data/labeled/*.csv`.
+- Estado actual: ya existen archivos `data/labeled_*.csv` en la raíz, pero los nuevos resultados se escriben en `data/labeled/`.
 
 ### 3. **Pipeline ML Completo** (Fases 5-12)
 - Ejecutar `05_strategy_builder.ipynb`: RF → Top 5 features → Tree → Reglas.
