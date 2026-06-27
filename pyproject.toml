@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smallcap-quant-ml"
+version = "0.2.0"
+description = "ML-driven small-cap trading strategy discovery pipeline."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "Henry Paolo Alfaro Sotil"}]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.25",
+    "yfinance>=0.2.0",
+    "scikit-learn>=1.2",
+    "jupyter>=1.0",
+    "ipykernel>=6.0",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+]
+
+[project.optional-dependencies]
+lightgbm = ["lightgbm>=4.0"]

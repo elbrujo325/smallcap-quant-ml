@@ -13,8 +13,8 @@
 |------|-----------------|-------------|--------|--------|
 | **1. Datos + Features** | `01_eda.ipynb` | EDA + calidad datos | `data/eda_summary.csv` | ✅ |
 | **2. Calibración Riesgo** | `batch_calibrate.py` | Csl + BP por activo | `data/universe_admitted.csv` | ✅ |
-| **3. Feature Engineering** | `03_feature_engineering.ipynb` | ~20 indicadores OHLCV | Features en memory/DISK | 🔲 |
-| **4. Triple Barrier Labeling** | `04_labeling.ipynb` | Etiquetado {0,1,2} | `data/labeled_*.csv` | 🔲 |
+| **3. Feature Engineering** | `03_feature_engineering.ipynb` | ~20 indicadores OHLCV | `data/features/*.csv` | ✅ |
+| **4. Triple Barrier Labeling** | `04_labeling.ipynb` | Etiquetado {0,1,2} | `data/labeled/*.csv` | ✅ |
 | **5. RF + Feature Selection** | `05_strategy_builder.ipynb` | RF → Top N features | Feature importances | 🔲 |
 | **6. Decision Tree + Rules** | `05_strategy_builder.ipynb` | Tree (depth=3/4) | `data/strategies_candidates.json` | 🔲 |
 | **7. Backtest + OOS** | `06_backtest_strategies.ipynb` | Train⇆Test (70/30) | `data/strategies_library.json` | 🔲 |
@@ -42,7 +42,9 @@ smallcap-quant-ml/
 │   ├── risk.py                       # **BACKTESTER + Risk** (Csl, SIZE, TP/SL)
 │   ├── labeling.py                   # Triple Barrier
 │   ├── strategy_builder.py           # RF → Tree → Rules (NUEVO)
-│   └── model.py                      # Referencia opcional
+├── docs/
+│   └── legacy/
+│       └── model.py                 # Legacy LightGBM stub
 ├── data/
 │   ├── calibration_all.csv           # 22 tickers probados
 │   ├── universe_admitted.csv         # Activos admitidos (Csl+BP ok) ✅
@@ -80,11 +82,12 @@ smallcap-quant-ml/
 
 ### 1. **Feature Engineering en Batch** (Fase 2)
 - Calcular ~20 indicadores para todos los tickers admitidos.
-- Output: `data/features_*.csv`.
+- Output: `data/features/*.csv`.
 
 ### 2. **Triple Barrier Labeling** (Fase 4)
 - Etiquetar entradas para cada activo.
-- Output: `data/labeled_*.csv`.
+- Output: `data/labeled/*.csv`.
+- Estado actual: ya existen archivos `data/labeled_*.csv` en la raíz, pero los nuevos resultados se escriben en `data/labeled/`.
 
 ### 3. **Pipeline ML Completo** (Fases 5-12)
 - Ejecutar `05_strategy_builder.ipynb`: RF → Top 5 features → Tree → Reglas.
@@ -95,33 +98,95 @@ smallcap-quant-ml/
 
 ## 🚀 Quick Start
 
+### 🔗 Copiar y pegar todo en terminal (para laptop fresca)
+
+Copia y ejecuta este bloque completo en tu terminal. Al terminar, abre VSCode o tu editor favorito y ejecuta los notebooks:
+
 ```bash
-# 1. Clonar
+# 1. Clonar el repositorio
 git clone https://github.com/elbrujo325/smallcap-quant-ml.git
 cd smallcap-quant-ml
 
-# 2. Ambiente
-python -m venv .venv
+# 2. Crear entorno virtual
+python3 -m venv .venv
 source .venv/bin/activate
 
-# 3. Instalar
-pip install pandas numpy yfinance scikit-learn jupyter
+# 3. Instalar dependencias (automático + setuptools + wheel para reproducibilidad)
+./scripts/setup_env.sh
 
-# 4. Calibrar Csl + BP (si no tienes universe_admitted.csv)
+# 4. Instalar el paquete en modo editable (para desarrollo)
+python3 -m pip install -e .
+
+# 5. Verificar que todo está correcto
+python -c "import src; print('✅ src version:', src.__version__)"
+python src/features.py
+python src/labeling.py
+
+# 6. Generar universo admitido (calibración de riesgo)
 python scripts/batch_calibrate.py
 
-# 5. Feature Engineering
-jupyter notebook notebooks/03_feature_engineering.ipynb
-
-# 6. Labeling
-jupyter notebook notebooks/04_labeling.ipynb
-
-# 7. Pipeline ML (RF → Tree → Reglas)
-jupyter notebook notebooks/05_strategy_builder.ipynb
-
-# 8. Backtest + Validación OOS
-jupyter notebook notebooks/06_backtest_strategies.ipynb
+# 7. Listo para abrir en VSCode o Jupyter
+# Sigue los pasos abajo para ejecutar los notebooks
 ```
+
+### 📓 Después de ejecutar los comandos anteriores:
+
+1. **Abre VSCode:**
+   ```bash
+   code .
+   ```
+   O abre tu editor de código favorito en la carpeta `smallcap-quant-ml`.
+
+2. **Abre Jupyter Lab o Notebook:**
+   ```bash
+   jupyter lab
+   # o
+   jupyter notebook
+   ```
+
+3. **Ejecuta los notebooks en este orden:**
+   - `notebooks/01_eda.ipynb` — Exploración y calidad de datos
+   - `notebooks/03_feature_engineering.ipynb` — Cálculo de ~20 indicadores
+   - `notebooks/04_labeling.ipynb` — Triple barrier labeling
+   - `notebooks/05_strategy_builder.ipynb` — Random Forest → Feature selection → Reglas
+   - `notebooks/06_backtest_strategies.ipynb` — Backtest y validación OOS
+
+### ⚙️ Configuración de Kernel en VSCode/Jupyter:
+
+Si Jupyter no carga el kernel correcto automáticamente, usa:
+
+```bash
+# Registrar kernel personalizado
+python -m ipykernel install --user --name=smallcap-quant-ml --display-name "smallcap-quant-ml (.venv)"
+
+# Luego en VSCode/Jupyter, selecciona este kernel antes de ejecutar las notebooks
+```
+
+---
+
+## 📋 Explicación detallada de cada paso
+
+**Clonar y entrar al repositorio:**
+- Descarga el código fuente desde GitHub a tu laptop local
+
+**Crear y activar entorno virtual:**
+- Aísla las dependencias de este proyecto del resto del sistema
+- Necesario para reproducibilidad
+
+**Instalar dependencias:**
+- `./scripts/setup_env.sh`: script automatizado que instala pip, setuptools, wheel y todos los requisitos
+- Manual: `python3 -m pip install -r requirements.txt` si quieres hacerlo paso a paso
+- Opcional: `python3 -m pip install -e .` para trabajar con el package en modo desarrollo
+
+**Verificaciones rápidas (smoke tests):**
+- Comprueba que todos los módulos principales carguen correctamente
+- Ejecuta tests simples en `src/features.py` y `src/labeling.py`
+
+**Generar universo admitido:**
+- `python scripts/batch_calibrate.py` calibra Csl y verifica Buying Power
+- Genera `data/universe_admitted.csv` que necesitan los notebooks
+
+**Ejecutar notebooks en orden:**
 
 ---
 
