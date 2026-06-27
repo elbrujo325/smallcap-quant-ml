@@ -1,0 +1,9 @@
+pandas>=2.0
+numpy>=1.25
+yfinance>=0.2.0
+scikit-learn>=1.2
+jupyter>=1.0
+matplotlib>=3.6
+seaborn>=0.12
+# Optional (install if you use model training with LightGBM)
+# lightgbm>=4.0

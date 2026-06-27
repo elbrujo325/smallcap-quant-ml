@@ -39,7 +39,6 @@ from src.features import (
     calculate_bollinger_dist,
     add_all_features_v2,
     filter_momentum_entries,
-    generate_entry_signal,
 )
 
 from src.risk import (
@@ -88,7 +87,6 @@ __all__ = [
     "calculate_bollinger_dist",
     "add_all_features_v2",
     "filter_momentum_entries",
-    "generate_entry_signal",
     # risk
     "calculate_sl_tp",
     "calculate_position_size",

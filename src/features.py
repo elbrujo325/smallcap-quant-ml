@@ -192,10 +192,21 @@ def add_all_features_v2(df: pd.DataFrame) -> pd.DataFrame:
     df['Upper_Wick'] = df['High'] - df[['Open', 'Close']].max(axis=1)
     df['Lower_Wick'] = df[['Open', 'Close']].min(axis=1) - df['Low']
     
-    # Fill NaNs (for early rows)
-    df = df.fillna(method='ffill').fillna(method='bfill')
+    # Fill NaNs (for early rows) — use ffill/bfill methods for pandas 3.0+ compatibility
+    df = df.ffill().bfill()
     
     return df
+
+
+def add_all_features(df: pd.DataFrame, atr_period: int = 50, sma_period: int = 10, roc_period: int = 5) -> pd.DataFrame:
+    """
+    Backwards-compatible wrapper around `add_all_features_v2`.
+    Older notebooks/scripts call `add_all_features(df, atr_period, sma_period, roc_period)`;
+    keep the signature but delegate to the v2 implementation for now.
+    """
+    # Note: v2 currently computes a fixed set of features. We accept the
+    # parameters for API compatibility but do not use them individually yet.
+    return add_all_features_v2(df)
 
 
 def filter_momentum_entries(df: pd.DataFrame, k: int = 10,
@@ -227,23 +238,3 @@ if __name__ == '__main__':
     df_test = add_all_features_v2(df_test)
     print("Features creadas:")
     print([c for c in df_test.columns if c not in ['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']])
-
-
-def generate_entry_signal(df: pd.DataFrame,
-                          price_min: float = 1.0,
-                          price_max: float = 20.0) -> pd.Series:
-    """
-    Generate entry signal based on standard criteria.
-
-    Conditions:
-    - Price in small-cap range
-    - Price above SMA (trend)
-    - ROC decaying (momentum fading)
-    - Favorable price structure
-    """
-    return (
-        (df['Close'] > price_min) & (df['Close'] <= price_max) &
-        (df['Close'] > df['SMA_10']) &
-        (df['ROC_10'] < df['ROC_10'].shift(3)) &
-        (df['Close'].shift(7) > df['High'].shift(9))
-    )
