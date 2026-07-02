@@ -3,36 +3,27 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pyo
-
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb_checkpoints/
-
 # Environment
 .venv/
 venv/
 .env
 .env.local
-
-# Data files (generated)
+# Data files (generated) - excepto los dos CSV que sí se versionan
 data/*.csv
 !data/universe_admitted.csv
 !data/calibration_all.csv
-
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
 # Packaging
 *.egg-info/
-
 # OS
 .DS_Store
 Thumbs.db
-
 # Logs
-*.logdata/calibration_all.csv
-data/universe_admitted.csv
+*.log
