@@ -207,7 +207,10 @@ def add_all_features(df: pd.DataFrame, atr_period: int = 50, sma_period: int = 1
     """
     # Note: v2 currently computes a fixed set of features. We accept the
     # parameters for API compatibility but do not use them individually yet.
-    return add_all_features_v2(df)
+    df = add_all_features_v2(df)
+    if "ATR" not in df.columns:
+        df["ATR"] = df.get("ATR_50", calculate_atr(df, period=atr_period))
+    return df
 
 
 def filter_momentum_entries(df: pd.DataFrame, k: int = 10,

@@ -67,7 +67,8 @@ def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,
                                     max_bars: int = 40,
                                     entry_signal: Optional[pd.Series] = None,
                                     min_price: float = 1.0,
-                                    max_price: float = 20.0) -> pd.DataFrame:
+                                    max_price: float = 20.0,
+                                    binary_target: bool = True) -> pd.DataFrame:
     """
     Apply Triple Barrier labeling to all valid entries in dataset.
     
@@ -87,7 +88,9 @@ def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,
         max_price: Maximum price for small-cap filter
     
     Returns:
-        DataFrame with 'label' column added (only valid rows, no NaN labels)
+        DataFrame with 'label' column added (only valid rows, no NaN labels).
+        If binary_target=True, labels are mapped to {1: TP, 0: SL or timeout};
+        otherwise the raw triple-barrier labels {0,1,2} are preserved.
     """
     labels = []
     valid_indices = []
@@ -120,6 +123,8 @@ def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,
             df, idx, close, sl_price, tp_price, max_bars,
             low_col='Low', high_col='High'
         )
+        if binary_target:
+            label = 1 if label == 1 else 0
         
         labels.append(label)
         valid_indices.append(idx)
@@ -138,17 +143,19 @@ def create_labeled_dataset(df: pd.DataFrame, csl: float,
                            tp_sl_ratio: float = 1.5,
                            atr_col: str = 'ATR_50',
                            max_bars: int = 40,
-                           entry_signal: Optional[pd.Series] = None) -> pd.DataFrame:
+                           entry_signal: Optional[pd.Series] = None,
+                           binary_target: bool = True) -> pd.DataFrame:
     """
     Full pipeline: add labels to original DataFrame.
     
     Returns enhanced DataFrame with:
       - All original columns (OHLCV + features)
-      - 'label' column (0, 1, or 2)
+      - 'label' column as binary TP/No-TP target by default
       - 'entry_idx' column (row index in original df)
     """
     labeled = apply_triple_barrier_to_dataset(
-        df, csl, tp_sl_ratio, atr_col, max_bars, entry_signal
+        df, csl, tp_sl_ratio, atr_col, max_bars, entry_signal,
+        binary_target=binary_target
     )
     
     # Merge back with original data

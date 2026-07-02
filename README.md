@@ -69,7 +69,8 @@ smallcap-quant-ml/
 - ~20 indicadores: RSI, ATR, EMA20/50, distancias %, VWAP, MACD, RVOL, Gap%, ADX, ROC, Momentum, Volatilidad, Bollinger, etc.
 
 ### 4. **Triple Barrier Labeling (`src/labeling.py`)**
-- Labels: 0 (SL), 1 (TP), 2 (Timeout).
+- El motor de triple barrier sigue decidiendo si la operación termina en SL, TP o timeout.
+- Para el entrenamiento del modelo, el target se binariza a: 1 = TP, 0 = SL o timeout.
 - Regla de desempate conservadora: SL gana si ambos se tocan simultáneamente.
 
 ### 5. **Strategy Builder (`src/strategy_builder.py`)**
@@ -230,12 +231,12 @@ print(BACKTEST.tp_sl_ratio)     # 1.5
 1. **Datos**: OHLCV de tickers admitidos.
 2. **Features**: ~20 indicadores.
 3. **Simulación**: Para cada vela, calcular SIZE, SL, TP usando `src/risk.py`.
-4. **Etiquetado**: Triple Barrier (0/1/2) max 40 velas forward.
-5. **Split**: 70% train (cronológico inicial), 30% test (final).
-6. **Random Forest**: Sobre TODOS los ~20 features → feature_importance.
-7. **Selección**: Top 3-5 features por RF.
-8. **Decision Tree**: max_depth=3/4, min_samples_leaf=30.
-9. **Reglas**: Cada hoja → estrategia si P(TP)>0.5 y n>=30.
+3. **Etiquetado**: Triple Barrier para decidir el outcome, luego target binario para ML (TP vs no-TP) max 40 velas forward.
+4. **Split**: 70% train (cronológico inicial), 30% test (final).
+5. **Random Forest**: Sobre TODOS los ~20 features → feature_importance.
+6. **Selección**: Top 3-5 features por RF.
+7. **Decision Tree**: max_depth=3/4, min_samples_leaf=30.
+8. **Reglas**: Cada hoja → estrategia si la tasa de TP supera el umbral y n>=30.
 10. **Backtest**: Usar `run_backtest_loop()` para cada regla (train).
 11. **Validación OOS**: Backtest en 30% test → PF_test >= 0.70 * PF_train.
 12. **Library**: Estrategias validadas guardadas en `data/strategies_library.json`.
@@ -248,6 +249,37 @@ print(BACKTEST.tp_sl_ratio)     # 1.5
 2. **No hay reinforcement desde OOS**: Las reglas se extraen solo del 70% train.
 3. **Backtester reutilizado**: No se reimplementa el motor, se llama a `run_backtest_loop()`.
 4. **Comisiones = 0 por ahora**: Añadir cuando tengas datos realistas.
+
+---
+
+## 📊 Resultados destacados del backtest
+
+Las estrategias más prometedoras que salieron del pipeline muestran un crecimiento claro, drawdowns contenidos y una relación positiva entre el número de trades y el PnL acumulado. La selección siguiente prioriza combinaciones con PnL positivo, correlación de la curva de equity con el progreso del backtest superior a 0.30 y drawdown moderado.
+
+### Ejemplos visuales
+
+![Resultados destacados](docs/results/results_dashboard.png)
+
+<div align="center">
+
+<img src="docs/results/result_01.png" alt="Backtest destacado 1" width="420" />
+<img src="docs/results/result_02.png" alt="Backtest destacado 2" width="420" />
+
+<img src="docs/results/result_03.png" alt="Backtest destacado 3" width="420" />
+<img src="docs/results/result_04.png" alt="Backtest destacado 4" width="420" />
+
+</div>
+
+### Resumen cuantitativo de las mejores combinaciones
+
+| Activo | Estrategia | PnL total | Retorno | Corr. equity/trades | Max drawdown |
+|--------|------------|-----------|--------|---------------------|--------------|
+| CRMD | Rule 8 | +4,026 | +40.3% | 0.93 | -9.7% |
+| ABSI | Rule 7 | +3,194 | +31.9% | 0.79 | -8.2% |
+| IMUX | Rule 8 | +2,237 | +22.4% | 0.33 | -10.3% |
+| NBTX | Rule 10 | +1,754 | +17.5% | 0.92 | -5.3% |
+
+> Estas curvas no representan una garantía de rendimiento futuro; muestran únicamente el comportamiento histórico de las reglas evaluadas con el backtest actual.
 
 ---
 

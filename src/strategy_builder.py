@@ -55,7 +55,9 @@ class StrategyBuilder:
                  top_n_features: int = 5,
                  max_depth: int = 4,
                  min_samples_leaf: int = 30,
-                 random_state: int = 42):
+                 random_state: int = 42,
+                 positive_label: Optional[int] = 1,
+                 min_positive_rate: float = 0.35):
         """
         Args:
             feature_cols: List of feature column names (if None, auto-detect)
@@ -72,6 +74,8 @@ class StrategyBuilder:
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.random_state = random_state
+        self.positive_label = positive_label
+        self.min_positive_rate = min_positive_rate
         
         self.rf_model = None
         self.tree_model = None
@@ -87,7 +91,7 @@ class StrategyBuilder:
         """
         # Auto-detect features if not specified
         if self.feature_cols is None:
-            exclude_cols = ['label', 'entry_idx', 'Datetime',
+            exclude_cols = ['label', label_col, 'entry_idx', 'Datetime',
                             'Open', 'High', 'Low', 'Close', 'Volume']
             all_cols = [c for c in df.columns if c not in exclude_cols]
             # Filter numeric only
@@ -98,6 +102,8 @@ class StrategyBuilder:
         
         X = df_clean[self.feature_cols].values
         y = df_clean[label_col].values
+        if self.positive_label is not None and len(np.unique(y)) > 2:
+            y = (y == self.positive_label).astype(int)
         
         # Temporal split 70/30 (chronological, no shuffling)
         n_train = int(len(X) * 0.7)
@@ -187,6 +193,7 @@ class StrategyBuilder:
             feature = tree.tree_.feature
             threshold = tree.tree_.threshold
             value = tree.tree_.value  # Class counts per node
+            node_samples = getattr(tree.tree_, 'n_node_samples', None)
         else:
             # Legacy fallback
             n_nodes = tree.node_count
@@ -195,6 +202,7 @@ class StrategyBuilder:
             feature = tree.feature
             threshold = tree.threshold
             value = tree.value  # Class counts per node
+            node_samples = None
         
         strategies = []
         
@@ -203,18 +211,19 @@ class StrategyBuilder:
             # Check if leaf
             if children_left[node_id] == children_right[node_id]:
                 # Leaf node
-                if n_samples >= self.min_samples_leaf:
-                    # Calculate P(Label=1)
+                sample_count = int(node_samples[node_id]) if node_samples is not None else int(n_samples)
+                if sample_count >= self.min_samples_leaf:
+                    # Calculate P(Label=1) for the leaf
                     class_counts = value[node_id][0]
                     total = class_counts.sum()
                     p_label_1 = class_counts[1] / total if total > 0 else 0
                     
-                    if p_label_1 > 0.5:
+                    if p_label_1 >= self.min_positive_rate:
                         # Valid strategy
                         strategy = StrategyRule(
                             rule_id=len(strategies),
                             conditions=condition_list.copy(),
-                            n_samples=int(n_samples),
+                            n_samples=int(sample_count),
                             p_label_1=float(p_label_1)
                         )
                         strategies.append(strategy)
@@ -225,15 +234,20 @@ class StrategyBuilder:
             split_thresh = threshold[node_id]
             feat_name = feature_names[split_feat]
             
+            left_child = children_left[node_id]
+            right_child = children_right[node_id]
+
             # Left child (feature <= threshold)
-            traverse(children_left[node_id],
-                     condition_list + [f"{feat_name} <= {split_thresh:.3f}"],
-                     value[node_id].sum())
+            if left_child != -1:
+                traverse(left_child,
+                         condition_list + [f"{feat_name} <= {split_thresh:.3f}"],
+                         value[left_child].sum())
             
             # Right child (feature > threshold)
-            traverse(children_right[node_id],
-                     condition_list + [f"{feat_name} > {split_thresh:.3f}"],
-                     value[node_id].sum())
+            if right_child != -1:
+                traverse(right_child,
+                         condition_list + [f"{feat_name} > {split_thresh:.3f}"],
+                         value[right_child].sum())
         
         # Start traversal from root
         traverse(0, [], value[0].sum())
