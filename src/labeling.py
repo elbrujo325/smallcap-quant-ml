@@ -19,9 +19,9 @@ from typing import Tuple, Optional
 
 
 def triple_barrier_label(df: pd.DataFrame, entry_idx: int,
-                         entry_price: float, sl_price: float,
-                         tp_price: float, max_bars: int = 40,
-                         low_col: str = 'Low', high_col: str = 'High') -> int:
+                          entry_price: float, sl_price: float,
+                          tp_price: float, max_bars: int = 40,
+                          low_col: str = 'Low', high_col: str = 'High') -> int:
     """
     Apply Triple Barrier labeling for a single entry.
     
@@ -37,43 +37,28 @@ def triple_barrier_label(df: pd.DataFrame, entry_idx: int,
     
     Returns:
         Label: 0 (SL), 1 (TP), or 2 (timeout)
-    
+     
     Tie-breaker Rule (conservative):
-        If High >= tp AND Low <= sl in the same bar, SL wins (label=0).
+        If High >= tp AND Low <= sl in the SAME bar as the first touch,
+        SL wins (label=0). Evaluates bar-by-bar in chronological order
+        and returns on first touch.
     """
     future_lows = df[low_col].iloc[entry_idx + 1: entry_idx + 1 + max_bars].values
     future_highs = df[high_col].iloc[entry_idx + 1: entry_idx + 1 + max_bars].values
     
     if len(future_lows) == 0:
-        # No data forward -> timeout
         return 2
     
-    n_bars = len(future_lows)
-    
-    # Find first SL hit
-    sl_hits = np.where(future_lows <= sl_price)[0]
-    tp_hits = np.where(future_highs >= tp_price)[0]
-    
-    # Tie-breaker: check if any bar has BOTH conditions
-    for i in range(n_bars):
-        if future_lows[i] <= sl_price and future_highs[i] >= tp_price:
-            # SL wins (conservative assumption)
+    for i in range(len(future_lows)):
+        hit_sl = future_lows[i] <= sl_price
+        hit_tp = future_highs[i] >= tp_price
+        if hit_sl and hit_tp:
             return 0
-    
-    # No tie: check which happened first
-    if len(sl_hits) > 0 and len(tp_hits) > 0:
-        first_sl = sl_hits[0]
-        first_tp = tp_hits[0]
-        if first_sl <= first_tp:
-            return 0  # SL first
-        else:
-            return 1  # TP first
-    elif len(sl_hits) > 0:
-        return 0  # Only SL
-    elif len(tp_hits) > 0:
-        return 1  # Only TP
-    else:
-        return 2  # Timeout
+        elif hit_sl:
+            return 0
+        elif hit_tp:
+            return 1
+    return 2
 
 
 def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,

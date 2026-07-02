@@ -87,7 +87,8 @@ class StrategyBuilder:
         """
         # Auto-detect features if not specified
         if self.feature_cols is None:
-            exclude_cols = ['label', 'entry_idx', 'Datetime', 'label']
+            exclude_cols = ['label', 'entry_idx', 'Datetime',
+                            'Open', 'High', 'Low', 'Close', 'Volume']
             all_cols = [c for c in df.columns if c not in exclude_cols]
             # Filter numeric only
             self.feature_cols = [c for c in all_cols if pd.api.types.is_numeric_dtype(df[c])]
