@@ -34,4 +34,5 @@ data/*.csv
 Thumbs.db
 
 # Logs
-*.log
+*.logdata/calibration_all.csv
+data/universe_admitted.csv
