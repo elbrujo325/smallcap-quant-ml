@@ -193,7 +193,8 @@ def add_all_features_v2(df: pd.DataFrame) -> pd.DataFrame:
     df['Lower_Wick'] = df[['Open', 'Close']].min(axis=1) - df['Low']
     
     # Fill NaNs (for early rows) — use ffill/bfill methods for pandas 3.0+ compatibility
-    df = df.ffill().bfill()
+    df = df.ffill()
+    df = df.dropna().reset_index(drop=True)
     
     return df
 
@@ -227,7 +228,7 @@ if __name__ == '__main__':
     n = 1000
     prices = 5 + 3 * np.cumsum(np.random.randn(n) * 0.02)
     df_test = pd.DataFrame({
-        'Datetime': pd.date_range('2025-01-01', periods=n, freq='H'),
+        'Datetime': pd.date_range('2025-01-01', periods=n, freq='h'),
         'Open': prices * (1 + np.random.randn(n) * 0.001),
         'High': prices * (1 + np.abs(np.random.randn(n)) * 0.002),
         'Low': prices * (1 - np.abs(np.random.randn(n)) * 0.002),
