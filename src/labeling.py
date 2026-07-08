@@ -69,34 +69,10 @@ def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,
                                     min_price: float = 1.0,
                                     max_price: float = 20.0,
                                     binary_target: bool = True) -> pd.DataFrame:
-    """
-    Apply Triple Barrier labeling to all valid entries in dataset.
-    
-    For each bar where entry is possible (or all bars if no signal provided):
-    1. Calculate ATR, SL, TP
-    2. Simulate forward up to max_bars
-    3. Assign label (0, 1, or 2)
-    
-    Args:
-        df: DataFrame with OHLC + ATR columns
-        csl: Stop Loss ATR multiplier
-        tp_sl_ratio: Take Profit / Stop Loss ratio (default 1.5)
-        atr_col: Column name for ATR
-        max_bars: Maximum holding period
-        entry_signal: Boolean Series for entry signals. If None, label all bars.
-        min_price: Minimum price for small-cap filter
-        max_price: Maximum price for small-cap filter
-    
-    Returns:
-        DataFrame with 'label' column added (only valid rows, no NaN labels).
-        If binary_target=True, labels are mapped to {1: TP, 0: SL or timeout};
-        otherwise the raw triple-barrier labels {0,1,2} are preserved.
-    """
     labels = []
     valid_indices = []
     
     if entry_signal is None:
-        # Label all bars (for feature importance on raw data)
         indices_to_label = df.index.tolist()
     else:
         indices_to_label = df[entry_signal].index.tolist()
@@ -104,25 +80,35 @@ def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,
     atr_series = df[atr_col]
     
     for idx in indices_to_label:
-        # Check if we have enough forward data
-        if df.index.get_loc(idx) + max_bars + 1 >= len(df):
+        # 1. Obtener la posición entera (localización) de la vela de señal
+        pos = df.index.get_loc(idx)
+        
+        # Guardas de seguridad para no salirte del array futuro (necesitamos pos + 1 + max_bars)
+        if pos + 1 + max_bars >= len(df):
             continue
         
-        atr = atr_series.loc[idx]
+        atr = atr_series.iloc[pos] # ATR calculado al cierre de la señal
         if pd.isna(atr) or atr <= 0:
             continue
+            
+        # 2. P_entry REAL: El Open de la SIGUIENTE vela (pos + 1) tras confirmarse la señal
+        p_entry = df['Open'].iloc[pos + 1]
         
-        close = df.loc[idx, 'Close']
-        if not (min_price <= close <= max_price):
+        # Filtro de precio Small-Cap basado en el precio de entrada real [1, 20]
+        if not (min_price <= p_entry <= max_price):
             continue
         
-        sl_price = close - atr * csl
-        tp_price = close + atr * tp_sl_ratio * csl
+        # 3. Niveles de precio exactos anclados a P_entry (Ecuaciones 5 y 6 del PDF)
+        sl_price = p_entry - atr * csl
+        tp_price = p_entry + atr * tp_sl_ratio * csl
         
+        # 4. Evaluamos las barreras desde el momento exacto en que entramos (pos + 1)
+        # Modificamos el índice enviado para que 'triple_barrier_label' empiece a iterar en pos + 2
         label = triple_barrier_label(
-            df, idx, close, sl_price, tp_price, max_bars,
+            df, pos + 1, p_entry, sl_price, tp_price, max_bars,
             low_col='Low', high_col='High'
         )
+        
         if binary_target:
             label = 1 if label == 1 else 0
         
@@ -132,9 +118,7 @@ def apply_triple_barrier_to_dataset(df: pd.DataFrame, csl: float,
     result = pd.DataFrame({
         'idx': valid_indices,
         'label': labels
-    })
-    result = result.set_index('idx')
-    result = result.sort_index()
+    }).set_index('idx').sort_index()
     
     return result
 
