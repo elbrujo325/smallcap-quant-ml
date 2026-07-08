@@ -274,10 +274,10 @@ Las estrategias más prometedoras que salieron del pipeline muestran un crecimie
 
 | Activo | Estrategia | PnL total | Retorno | Corr. equity/trades | Max drawdown |
 |--------|------------|-----------|--------|---------------------|--------------|
-| CRMD | Rule 8 | +4,026 | +40.3% | 0.93 | -9.7% |
-| ABSI | Rule 7 | +3,194 | +31.9% | 0.79 | -8.2% |
-| IMUX | Rule 8 | +2,237 | +22.4% | 0.33 | -10.3% |
-| NBTX | Rule 10 | +1,754 | +17.5% | 0.92 | -5.3% |
+| ABSI | Rule 4 | +4,270 | +42.7% | 0.92 | -7.7% |
+| CRMD | Rule 6 | +3,074 | +30.7% | 0.92 | -10.9% |
+| EXTR | Rule 7 | +2,324 | +23.2% | 0.85 | -14.0% |
+| IMUX | Rule 6 | +2,040 | +20.4% | 0.59 | -8.5% |
 
 > Estas curvas no representan una garantía de rendimiento futuro; muestran únicamente el comportamiento histórico de las reglas evaluadas con el backtest actual.
 
